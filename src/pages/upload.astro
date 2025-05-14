@@ -1,0 +1,228 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ImageUploader from '../components/ImageUploader';
+import ApiKeyModal from '../components/ApiKeyModal';
+---
+
+<Layout title="Upload & Compose - DreamNode Instagram Scheduler">
+  <div class="py-6">
+    <h1 class="text-3xl font-bold mb-6">Upload & Compose</h1>
+    <p class="mb-6">Upload an image and create a caption for your Instagram post.</p>
+    
+    <div class="bg-base-100 p-6 rounded-box shadow-lg">
+      <div id="upload-container"></div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { render } from 'react-dom';
+  import React, { useState, useEffect } from 'react';
+  import ImageUploader from '../components/ImageUploader';
+  import ApiKeyModal from '../components/ApiKeyModal';
+  import { enhanceCaption, savePost, getGeminiApiKey, generateFilename } from '../lib/api';
+  
+  const UploadForm = () => {
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [caption, setCaption] = useState('');
+    const [title, setTitle] = useState('');
+    const [isEnhancing, setIsEnhancing] = useState(false);
+    const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    
+    useEffect(() => {
+      // Check if API key exists
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        setIsApiKeyModalOpen(true);
+      }
+    }, []);
+    
+    const handleImageSelected = (file) => {
+      setSelectedImage(file);
+      setError('');
+    };
+    
+    const handleEnhanceCaption = async () => {
+      if (!selectedImage) {
+        setError('Please upload an image first');
+        return;
+      }
+      
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        setIsApiKeyModalOpen(true);
+        return;
+      }
+      
+      setIsEnhancing(true);
+      setError('');
+      
+      try {
+        const result = await enhanceCaption(selectedImage, caption);
+        setCaption(result.caption);
+        
+        // If title is empty, suggest one
+        if (!title) {
+          setTitle(result.suggestedTitle);
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to enhance caption');
+      } finally {
+        setIsEnhancing(false);
+      }
+    };
+    
+    const handleSavePost = async () => {
+      if (!selectedImage) {
+        setError('Please upload an image first');
+        return;
+      }
+      
+      if (!caption) {
+        setError('Please add a caption');
+        return;
+      }
+      
+      if (!title) {
+        setError('Please add a title');
+        return;
+      }
+      
+      setIsSaving(true);
+      setError('');
+      
+      try {
+        const postId = await savePost({
+          title,
+          image: selectedImage,
+          caption
+        });
+        
+        setSuccess(`Post saved successfully! It will be published according to the schedule.`);
+        
+        // Reset form
+        setTimeout(() => {
+          setSelectedImage(null);
+          setCaption('');
+          setTitle('');
+          setSuccess('');
+        }, 3000);
+      } catch (err) {
+        setError(err.message || 'Failed to save post');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+    
+    return (
+      <div>
+        <ImageUploader onImageSelected={handleImageSelected} />
+        
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Post Title</span>
+          </label>
+          <input
+            type="text"
+            placeholder="Enter a title for your post"
+            className="input input-bordered w-full"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <label className="label">
+            <span className="label-text-alt">This will be used in the filename</span>
+          </label>
+        </div>
+        
+        <div className="form-control mb-6">
+          <label className="label">
+            <span className="label-text">Caption</span>
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={handleEnhanceCaption}
+              disabled={isEnhancing || !selectedImage}
+            >
+              {isEnhancing ? (
+                <>
+                  <span className="loading loading-spinner loading-xs"></span>
+                  Enhancing...
+                </>
+              ) : (
+                <>Enhance with AI</>
+              )}
+            </button>
+          </label>
+          <textarea
+            className="textarea textarea-bordered h-32"
+            placeholder="Write your caption here or use AI to enhance it"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+          ></textarea>
+          <label className="label">
+            <span className="label-text-alt">Instagram captions can be up to 2,200 characters</span>
+          </label>
+        </div>
+        
+        {error && (
+          <div className="alert alert-error mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{error}</span>
+          </div>
+        )}
+        
+        {success && (
+          <div className="alert alert-success mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{success}</span>
+          </div>
+        )}
+        
+        <div className="flex justify-between mt-6">
+          <button
+            className="btn btn-outline"
+            onClick={() => {
+              setSelectedImage(null);
+              setCaption('');
+              setTitle('');
+            }}
+          >
+            Clear
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleSavePost}
+            disabled={isSaving || !selectedImage || !caption || !title}
+          >
+            {isSaving ? (
+              <>
+                <span className="loading loading-spinner loading-xs"></span>
+                Saving...
+              </>
+            ) : (
+              <>Save Post</>
+            )}
+          </button>
+        </div>
+        
+        <ApiKeyModal
+          isOpen={isApiKeyModalOpen}
+          onClose={() => setIsApiKeyModalOpen(false)}
+        />
+      </div>
+    );
+  };
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('upload-container');
+    if (container) {
+      render(<UploadForm />, container);
+    }
+  });
+</script>

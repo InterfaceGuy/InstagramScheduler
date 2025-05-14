@@ -1,0 +1,59 @@
+---
+import Layout from '../layouts/Layout.astro';
+import DraggablePostList from '../components/DraggablePostList';
+---
+
+<Layout title="Backlog - DreamNode Instagram Scheduler">
+  <div class="py-6">
+    <h1 class="text-3xl font-bold mb-6">Post Backlog</h1>
+    <p class="mb-6">Drag and drop to reorder your upcoming posts. The post at the top will be published next.</p>
+    
+    <div class="bg-base-100 p-6 rounded-box shadow-lg">
+      <div id="backlog-container">
+        <div class="text-center py-12">
+          <div class="loading loading-spinner loading-lg"></div>
+          <p class="mt-4">Loading posts...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { getPosts } from '../lib/api';
+  import { render } from 'react-dom';
+  import DraggablePostList from '../components/DraggablePostList';
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('backlog-container');
+    if (!container) return;
+    
+    // Get posts from localStorage (in a real app, this would fetch from GitHub)
+    const posts = getPosts().filter(post => !post.published);
+    
+    if (posts.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-12">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+          </svg>
+          <h3 class="text-xl font-bold mt-4">No posts in backlog</h3>
+          <p class="mt-2 text-base-content/70">Create a new post to get started</p>
+          <a href="/upload" class="btn btn-primary mt-4">Create New Post</a>
+        </div>
+      `;
+      return;
+    }
+    
+    // Render the React component
+    render(
+      <DraggablePostList 
+        posts={posts} 
+        onReorder={(newPosts) => {
+          console.log('Posts reordered:', newPosts);
+        }} 
+      />,
+      container
+    );
+  });
+</script>

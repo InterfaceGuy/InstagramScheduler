@@ -1,0 +1,39 @@
+name: Scheduled Instagram Post
+
+on:
+  schedule:
+    # Run every Monday and Thursday at 9am Portugal time (UTC+1 or UTC+2 depending on DST)
+    - cron: '0 8 * * 1,4'  # UTC time (adjust for Portugal timezone)
+  
+  # Allow manual triggering for testing
+  workflow_dispatch:
+
+jobs:
+  publish-to-instagram:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Find and publish next post
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+        run: |
+          node .github/scripts/publish-instagram-post.js
+          
+      - name: Commit changes
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add posts/
+          git commit -m "Mark post as published" || echo "No changes to commit"
+          git push
