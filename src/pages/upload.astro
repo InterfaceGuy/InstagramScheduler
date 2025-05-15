@@ -95,6 +95,7 @@ import ApiKeyModal from '../components/ApiKeyModal';
       setError('');
       
       try {
+        // In a real app, this would commit to GitHub
         const postId = await savePost({
           title,
           image: selectedImage,

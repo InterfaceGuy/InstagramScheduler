@@ -40,41 +40,40 @@ import PostCard from '../components/PostCard';
       const allPosts = getPosts();
       setPosts(allPosts);
       
-      // Set up filter buttons
+      // Set up filter buttons - using event delegation might be better in a larger app,
+      // but direct listeners are fine for this example.
       const allBtn = document.getElementById('all-btn');
       const publishedBtn = document.getElementById('published-btn');
       const scheduledBtn = document.getElementById('scheduled-btn');
       
+      const updateButtonClasses = (activeFilter) => {
+        allBtn.classList.remove('btn-primary', 'btn-outline');
+        publishedBtn.classList.remove('btn-primary', 'btn-outline');
+        scheduledBtn.classList.remove('btn-primary', 'btn-outline');
+
+        allBtn.classList.add(activeFilter === 'all' ? 'btn-primary' : 'btn-outline');
+        publishedBtn.classList.add(activeFilter === 'published' ? 'btn-primary' : 'btn-outline');
+        scheduledBtn.classList.add(activeFilter === 'scheduled' ? 'btn-primary' : 'btn-outline');
+      };
+
+      updateButtonClasses(filter); // Set initial classes
+
       allBtn.addEventListener('click', () => {
         setFilter('all');
-        allBtn.classList.remove('btn-outline');
-        allBtn.classList.add('btn-primary');
-        publishedBtn.classList.add('btn-outline');
-        publishedBtn.classList.remove('btn-primary');
-        scheduledBtn.classList.add('btn-outline');
-        scheduledBtn.classList.remove('btn-primary');
+        updateButtonClasses('all');
       });
       
       publishedBtn.addEventListener('click', () => {
         setFilter('published');
-        publishedBtn.classList.remove('btn-outline');
-        publishedBtn.classList.add('btn-primary');
-        allBtn.classList.add('btn-outline');
-        allBtn.classList.remove('btn-primary');
-        scheduledBtn.classList.add('btn-outline');
-        scheduledBtn.classList.remove('btn-primary');
+        updateButtonClasses('published');
       });
       
       scheduledBtn.addEventListener('click', () => {
         setFilter('scheduled');
-        scheduledBtn.classList.remove('btn-outline');
-        scheduledBtn.classList.add('btn-primary');
-        allBtn.classList.add('btn-outline');
-        allBtn.classList.remove('btn-primary');
-        publishedBtn.classList.add('btn-outline');
-        publishedBtn.classList.remove('btn-primary');
+        updateButtonClasses('scheduled');
       });
-    }, []);
+
+    }, []); // Empty dependency array means this runs once on mount
     
     const filteredPosts = posts.filter(post => {
       if (filter === 'all') return true;
